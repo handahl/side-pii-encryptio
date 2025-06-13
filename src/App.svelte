@@ -1,6 +1,7 @@
 <script lang="ts">
   import EncryptorTab from './lib/EncryptorTab.svelte';
   import ParagraphProcessorTab from './lib/ParagraphProcessorTab.svelte';
+  import SettingsTab from './lib/SettingsTab.svelte';
 
   // State to track the currently active tab
   let activeTab: 'encryptor' | 'paragraph' | 'settings' = 'encryptor';
@@ -61,21 +62,7 @@
       </div>
     {:else if activeTab === 'settings'}
       <div class="bg-white rounded-lg shadow-sm p-6">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4">Settings</h2>
-        <p class="text-gray-600">Configure your encryption preferences and security settings.</p>
-        
-        <!-- Placeholder for future settings -->
-        <div class="mt-6 space-y-4">
-          <div class="bg-gray-50 rounded-md p-4">
-            <h3 class="text-sm font-medium text-gray-700 mb-2">Coming Soon</h3>
-            <ul class="text-sm text-gray-600 space-y-1">
-              <li>• Encryption strength customization</li>
-              <li>• Theme selection (Light/Dark mode)</li>
-              <li>• Export/Import settings</li>
-              <li>• Auto-clear timeout options</li>
-            </ul>
-          </div>
-        </div>
+        <SettingsTab />
       </div>
     {/if}
   </div>
