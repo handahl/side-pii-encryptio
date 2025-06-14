@@ -1,4 +1,4 @@
-import * as argon2 from 'argon2-browser';
+import argon2 from 'argon2-browser';
 
 // Get encryption settings from localStorage
 function getEncryptionSettings() {

@@ -12,5 +12,10 @@ export default defineConfig({
   ],
   optimizeDeps: {
     exclude: ['argon2-browser']
+  },
+  server: {
+    fs: {
+      allow: ['..']
+    }
   }
 })

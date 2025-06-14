@@ -96,11 +96,27 @@
     showImportExport = true;
   }
 
+  // Deep merge utility for settings objects
+  function deepMerge(target: any, source: any): any {
+    for (const key in source) {
+      if (
+        source[key] &&
+        typeof source[key] === 'object' &&
+        !Array.isArray(source[key])
+      ) {
+        target[key] = deepMerge(target[key] || {}, source[key]);
+      } else {
+        target[key] = source[key];
+      }
+    }
+    return target;
+  }
+
   // Import settings
   function importSettings() {
     try {
       const imported = JSON.parse(importExportData);
-      settings = { ...defaultSettings, ...imported };
+      settings = deepMerge({ ...defaultSettings }, imported);
       saveSettings();
       showImportExport = false;
       importExportData = '';
