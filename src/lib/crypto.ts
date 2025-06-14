@@ -1,3 +1,5 @@
+import * as argon2 from 'argon2-browser';
+
 /**
  * Converts an ArrayBuffer or Uint8Array to a Base64 string safely, avoiding call-stack overflows.
  * @param buffer - The ArrayBuffer or Uint8Array to convert
@@ -12,7 +14,6 @@ function arrayBufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
   }
   return btoa(binary);
 }
-import * as argon2 from 'argon2-browser';
 
 // Get encryption settings from localStorage
 function getEncryptionSettings() {
@@ -89,6 +90,7 @@ export async function encryptText(plaintext: string, secret: string): Promise<st
   const payload = {
     v: 1, // version
     salt: btoa(String.fromCharCode(...salt)),
+    nonce: btoa(String.fromCharCode(...nonce)), // Fixed: Added missing nonce
     ciphertext: arrayBufferToBase64(ciphertext),
     // Store the parameters used for this encryption
     params: {
