@@ -1,4 +1,4 @@
-import * as argon2 from 'argon2-browser';
+import argon2 from 'argon2-browser';
 
 /**
  * Converts an ArrayBuffer or Uint8Array to a Base64 string safely, avoiding call-stack overflows.
@@ -42,69 +42,74 @@ function getEncryptionSettings() {
  * @returns A Base64-encoded JSON payload containing salt, nonce, and ciphertext
  */
 export async function encryptText(plaintext: string, secret: string): Promise<string> {
-  const settings = getEncryptionSettings();
-  
-  // Step 1: Generate a cryptographically secure 16-byte salt
-  const salt = crypto.getRandomValues(new Uint8Array(16));
+  try {
+    const settings = getEncryptionSettings();
+    
+    // Step 1: Generate a cryptographically secure 16-byte salt
+    const salt = crypto.getRandomValues(new Uint8Array(16));
 
-  // Step 2: Derive a key using Argon2id with settings from localStorage
-  const keyResult = await argon2.hash({
-    pass: secret,
-    salt: salt,
-    time: settings.iterations,
-    mem: settings.memory,
-    hashLen: settings.hashLength,
-    type: argon2.ArgonType.Argon2id
-  });
+    // Step 2: Derive a key using Argon2id with settings from localStorage
+    const keyResult = await argon2.hash({
+      pass: secret,
+      salt: salt,
+      time: settings.iterations,
+      mem: settings.memory,
+      hashLen: settings.hashLength,
+      type: argon2.ArgonType.Argon2id
+    });
 
-  // Convert the derived key hash to Uint8Array
-  const derivedKey = new Uint8Array(keyResult.hash);
+    // Convert the derived key hash to Uint8Array
+    const derivedKey = new Uint8Array(keyResult.hash);
 
-  // Step 3: Generate a cryptographically secure 12-byte nonce/IV
-  const nonce = crypto.getRandomValues(new Uint8Array(12));
+    // Step 3: Generate a cryptographically secure 12-byte nonce/IV
+    const nonce = crypto.getRandomValues(new Uint8Array(12));
 
-  // Step 4: Import the derived key for use with Web Crypto API
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    derivedKey,
-    { name: 'AES-GCM' },
-    false,
-    ['encrypt']
-  );
+    // Step 4: Import the derived key for use with Web Crypto API
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      derivedKey,
+      { name: 'AES-GCM' },
+      false,
+      ['encrypt']
+    );
 
-  // Convert plaintext to Uint8Array
-  const plaintextBytes = new TextEncoder().encode(plaintext);
+    // Convert plaintext to Uint8Array
+    const plaintextBytes = new TextEncoder().encode(plaintext);
 
-  // Encrypt the plaintext using AES-GCM
-  const ciphertext = await crypto.subtle.encrypt(
-    {
-      name: 'AES-GCM',
-      iv: nonce
-    },
-    cryptoKey,
-    plaintextBytes
-  );
+    // Encrypt the plaintext using AES-GCM
+    const ciphertext = await crypto.subtle.encrypt(
+      {
+        name: 'AES-GCM',
+        iv: nonce
+      },
+      cryptoKey,
+      plaintextBytes
+    );
 
-  // Step 5: Create JSON object with Base64-encoded components
-  // Include settings version for future compatibility
-  const payload = {
-    v: 1, // version
-    salt: btoa(String.fromCharCode(...salt)),
-    nonce: btoa(String.fromCharCode(...nonce)), // Fixed: Added missing nonce
-    ciphertext: arrayBufferToBase64(ciphertext),
-    // Store the parameters used for this encryption
-    params: {
-      iterations: settings.iterations,
-      memory: settings.memory,
-      hashLen: settings.hashLength
-    }
-  };
+    // Step 5: Create JSON object with Base64-encoded components
+    // Include settings version for future compatibility
+    const payload = {
+      v: 1, // version
+      salt: btoa(String.fromCharCode(...salt)),
+      nonce: btoa(String.fromCharCode(...nonce)),
+      ciphertext: arrayBufferToBase64(ciphertext),
+      // Store the parameters used for this encryption
+      params: {
+        iterations: settings.iterations,
+        memory: settings.memory,
+        hashLen: settings.hashLength
+      }
+    };
 
-  // Step 6: JSON.stringify and Base64 encode the entire payload
-  const jsonPayload = JSON.stringify(payload);
-  const base64Payload = btoa(jsonPayload);
+    // Step 6: JSON.stringify and Base64 encode the entire payload
+    const jsonPayload = JSON.stringify(payload);
+    const base64Payload = btoa(jsonPayload);
 
-  return base64Payload;
+    return base64Payload;
+  } catch (error) {
+    console.error('Encryption error:', error);
+    throw new Error('Unable to generate encryption key. Your device may be low on memory.');
+  }
 }
 
 /**

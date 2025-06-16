@@ -4,6 +4,7 @@ declare module 'argon2-browser' {
     Argon2i = 1,
     Argon2id = 2
   }
+  
   export interface HashOptions {
     pass: string | Uint8Array;
     salt: string | Uint8Array;
@@ -12,15 +13,25 @@ declare module 'argon2-browser' {
     hashLen: number;
     type: ArgonType;
   }
+  
   export interface HashResult {
     hash: Uint8Array;
     hashHex: string;
     encoded: string;
   }
+  
   export function hash(options: HashOptions): Promise<HashResult>;
-}
-
-declare module 'argon2-browser/dist/argon2-bundled.min.js' {
-  const argon2: any;
+  
+  export const ArgonType: {
+    Argon2d: 0;
+    Argon2i: 1;
+    Argon2id: 2;
+  };
+  
+  const argon2: {
+    hash: (options: HashOptions) => Promise<HashResult>;
+    ArgonType: typeof ArgonType;
+  };
+  
   export default argon2;
 }
