@@ -1,5 +1,4 @@
 <script lang="ts">
-  // Import the Web Crypto API version instead
   import { encryptText, decryptText } from './crypto-webcrypto';
   import { fade } from 'svelte/transition';
 
@@ -29,8 +28,8 @@
       showResult = false;
       errorMessage = '';
       
-      // Add a small delay to show the animation
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Add a delay to show the swoosh animation
+      await new Promise(resolve => setTimeout(resolve, 600));
       
       ciphertext = await encryptText(plaintext, secret);
       showResult = true;
@@ -149,7 +148,7 @@
           disabled={isLoading}
           class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105"
         >
-          {#if isLoading}
+          {#if isLoading && isEncrypting}
             <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -164,7 +163,7 @@
           disabled={isLoading}
           class="flex-1 bg-green-600 text-white px-4 py-2 rounded-md font-medium hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105"
         >
-          {#if isLoading}
+          {#if isLoading && !isEncrypting}
             <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -189,8 +188,7 @@
             bind:value={ciphertext}
             placeholder="Encrypted text will appear here..."
             rows="8"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none font-mono text-sm"
-            transition:fade={{ duration: 600 }}
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none font-mono text-sm fade-in-animation"
           ></textarea>
         {:else}
           <textarea
@@ -209,8 +207,7 @@
       {#if ciphertext && showResult}
         <button
           on:click={() => navigator.clipboard.writeText(ciphertext)}
-          class="w-full bg-gray-600 text-white px-4 py-2 rounded-md font-medium hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
-          transition:fade={{ duration: 600, delay: 200 }}
+          class="w-full bg-gray-600 text-white px-4 py-2 rounded-md font-medium hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105 fade-in-animation"
         >
           📋 Copy to Clipboard
         </button>
@@ -234,7 +231,7 @@
             <li>Key derivation with PBKDF2-SHA256 (100,000 iterations)</li>
             <li>Each encryption uses a unique salt and IV</li>
             <li>All cryptographic operations happen locally in your browser</li>
-            <li>No external dependencies - uses native Web Crypto API</li>
+            <li>Compact binary format for efficient storage</li>
           </ul>
         </div>
       </div>

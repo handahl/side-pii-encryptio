@@ -74,23 +74,20 @@ async function deriveKey(password: string, salt: Uint8Array, iterations: number)
 
 /**
  * Encrypts plaintext using AES-GCM with PBKDF2 key derivation
+ * Returns a compact binary format encoded in Base64
  */
 export async function encryptText(plaintext: string, secret: string): Promise<string> {
   try {
     console.log('Starting encryption with Web Crypto API...');
     
     const settings = getEncryptionSettings();
-    console.log('Encryption settings:', settings);
     
     // Generate salt and IV
-    const salt = crypto.getRandomValues(new Uint8Array(settings.saltLength));
-    const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV for AES-GCM
-    
-    console.log('Generated salt and IV');
+    const salt = crypto.getRandomValues(new Uint8Array(16)); // 16 bytes salt
+    const iv = crypto.getRandomValues(new Uint8Array(12)); // 12 bytes IV for AES-GCM
     
     // Derive key using PBKDF2
     const key = await deriveKey(secret, salt, settings.iterations);
-    console.log('Key derived successfully');
     
     // Encrypt the plaintext
     const plaintextBytes = new TextEncoder().encode(plaintext);
@@ -103,23 +100,36 @@ export async function encryptText(plaintext: string, secret: string): Promise<st
       plaintextBytes
     );
     
-    console.log('Encryption successful');
+    // Create compact binary format: version(1) + iterations(4) + salt(16) + iv(12) + ciphertext
+    const ciphertextBytes = new Uint8Array(ciphertext);
+    const totalLength = 1 + 4 + 16 + 12 + ciphertextBytes.length;
+    const result = new Uint8Array(totalLength);
     
-    // Create payload
-    const payload = {
-      v: 2, // version 2 for PBKDF2
-      algorithm: 'PBKDF2-SHA256',
-      salt: arrayBufferToBase64(salt),
-      iv: arrayBufferToBase64(iv),
-      ciphertext: arrayBufferToBase64(ciphertext),
-      params: {
-        iterations: settings.iterations,
-        saltLength: settings.saltLength,
-        keyLength: settings.keyLength
-      }
-    };
+    let offset = 0;
     
-    return btoa(JSON.stringify(payload));
+    // Version byte (2 for PBKDF2)
+    result[offset] = 2;
+    offset += 1;
+    
+    // Iterations (4 bytes, big-endian)
+    const iterationsBytes = new Uint8Array(4);
+    new DataView(iterationsBytes.buffer).setUint32(0, settings.iterations, false);
+    result.set(iterationsBytes, offset);
+    offset += 4;
+    
+    // Salt (16 bytes)
+    result.set(salt, offset);
+    offset += 16;
+    
+    // IV (12 bytes)
+    result.set(iv, offset);
+    offset += 12;
+    
+    // Ciphertext (remaining bytes)
+    result.set(ciphertextBytes, offset);
+    
+    // Return as Base64
+    return arrayBufferToBase64(result);
     
   } catch (error) {
     console.error('Encryption error:', error);
@@ -128,27 +138,48 @@ export async function encryptText(plaintext: string, secret: string): Promise<st
 }
 
 /**
- * Decrypts an encrypted payload using PBKDF2 key derivation
+ * Decrypts a compact binary format encrypted payload
  */
 export async function decryptText(encryptedPayload: string, secret: string): Promise<string> {
   try {
     console.log('Starting decryption with Web Crypto API...');
     
-    // Parse payload
-    const payload = JSON.parse(atob(encryptedPayload));
-    console.log('Payload version:', payload.v, 'Algorithm:', payload.algorithm);
+    // Decode from Base64
+    const data = base64ToUint8Array(encryptedPayload);
     
-    // Extract components
-    const salt = base64ToUint8Array(payload.salt);
-    const iv = base64ToUint8Array(payload.iv);
-    const ciphertext = base64ToUint8Array(payload.ciphertext);
+    if (data.length < 33) { // minimum: 1 + 4 + 16 + 12 = 33 bytes
+      throw new Error('Invalid encrypted data format');
+    }
     
-    // Use stored parameters
-    const params = payload.params || getEncryptionSettings();
+    let offset = 0;
+    
+    // Read version
+    const version = data[offset];
+    offset += 1;
+    
+    if (version !== 2) {
+      throw new Error(`Unsupported encryption version: ${version}`);
+    }
+    
+    // Read iterations (4 bytes, big-endian)
+    const iterations = new DataView(data.buffer, data.byteOffset + offset, 4).getUint32(0, false);
+    offset += 4;
+    
+    // Read salt (16 bytes)
+    const salt = data.slice(offset, offset + 16);
+    offset += 16;
+    
+    // Read IV (12 bytes)
+    const iv = data.slice(offset, offset + 12);
+    offset += 12;
+    
+    // Read ciphertext (remaining bytes)
+    const ciphertext = data.slice(offset);
+    
+    console.log(`Decrypting with ${iterations} iterations`);
     
     // Derive the same key
-    const key = await deriveKey(secret, salt, params.iterations);
-    console.log('Key re-derived successfully');
+    const key = await deriveKey(secret, salt, iterations);
     
     // Decrypt
     const decryptedBuffer = await crypto.subtle.decrypt(
