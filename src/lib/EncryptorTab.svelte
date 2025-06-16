@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { encryptText, decryptText } from './crypto';
+  // Import the Web Crypto API version instead
+  import { encryptText, decryptText } from './crypto-webcrypto';
   import { fade } from 'svelte/transition';
 
   // State variables for form fields
@@ -34,7 +35,7 @@
       ciphertext = await encryptText(plaintext, secret);
       showResult = true;
     } catch (error) {
-      errorMessage = 'Encryption failed. Please try again.';
+      errorMessage = error.message || 'Encryption failed. Please try again.';
       console.error('Encryption error:', error);
     } finally {
       isLoading = false;
@@ -60,7 +61,7 @@
       plaintext = await decryptText(ciphertext, secret);
       showResult = true;
     } catch (error) {
-      errorMessage = 'Decryption failed. Check your secret phrase or encrypted data.';
+      errorMessage = error.message || 'Decryption failed. Check your secret phrase or encrypted data.';
       console.error('Decryption error:', error);
     } finally {
       isLoading = false;
@@ -89,7 +90,7 @@
   </div>
 
   <p class="text-gray-600">
-    Securely encrypt and decrypt your sensitive text using AES-GCM encryption with Argon2id key derivation.
+    Securely encrypt and decrypt your sensitive text using AES-GCM encryption with PBKDF2 key derivation.
   </p>
 
   <!-- Error Message -->
@@ -230,9 +231,10 @@
         <div class="mt-2 text-sm text-blue-700">
           <ul class="list-disc list-inside space-y-1">
             <li>Uses AES-GCM encryption with 256-bit keys</li>
-            <li>Key derivation with Argon2id (memory-hard, GPU-resistant)</li>
-            <li>Each encryption uses a unique salt and nonce</li>
+            <li>Key derivation with PBKDF2-SHA256 (100,000 iterations)</li>
+            <li>Each encryption uses a unique salt and IV</li>
             <li>All cryptographic operations happen locally in your browser</li>
+            <li>No external dependencies - uses native Web Crypto API</li>
           </ul>
         </div>
       </div>
