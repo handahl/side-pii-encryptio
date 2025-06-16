@@ -1,4 +1,40 @@
-import * as argon2 from 'argon2-browser';
+// Import argon2-browser differently to handle Vite bundling issues
+let argon2: any;
+
+// Initialize argon2 library
+async function initArgon2() {
+  if (!argon2) {
+    try {
+      // Try different import methods for better compatibility
+      argon2 = await import('argon2-browser');
+      
+      // If the default export doesn't work, try the named exports
+      if (!argon2.hash || !argon2.ArgonType) {
+        const argon2Module = await import('argon2-browser');
+        argon2 = argon2Module.default || argon2Module;
+      }
+      
+      // If still no ArgonType, define it manually
+      if (!argon2.ArgonType) {
+        argon2.ArgonType = {
+          Argon2d: 0,
+          Argon2i: 1,
+          Argon2id: 2
+        };
+      }
+      
+      console.log('Argon2 initialized successfully:', {
+        hasHash: typeof argon2.hash === 'function',
+        hasArgonType: !!argon2.ArgonType,
+        ArgonType: argon2.ArgonType
+      });
+    } catch (error) {
+      console.error('Failed to initialize argon2:', error);
+      throw new Error('Failed to load cryptographic library. Please refresh the page.');
+    }
+  }
+  return argon2;
+}
 
 /**
  * Converts an ArrayBuffer or Uint8Array to a Base64 string safely, avoiding call-stack overflows.
@@ -45,10 +81,8 @@ export async function encryptText(plaintext: string, secret: string): Promise<st
   try {
     console.log('Starting encryption process...');
     
-    // Debug: Check if argon2 is properly imported
-    console.log('argon2 object:', argon2);
-    console.log('argon2.ArgonType:', argon2.ArgonType);
-    console.log('argon2.hash function:', typeof argon2.hash);
+    // Initialize argon2 library
+    const argon2Lib = await initArgon2();
     
     const settings = getEncryptionSettings();
     console.log('Encryption settings:', settings);
@@ -58,25 +92,18 @@ export async function encryptText(plaintext: string, secret: string): Promise<st
     console.log('Generated salt:', salt);
 
     // Step 2: Derive a key using Argon2id with settings from localStorage
-    console.log('About to call argon2.hash with:', {
-      pass: '***hidden***',
-      salt: salt,
-      time: settings.iterations,
-      mem: settings.memory,
-      hashLen: settings.hashLength,
-      type: argon2.ArgonType?.Argon2id
-    });
+    console.log('About to call argon2.hash with type:', argon2Lib.ArgonType.Argon2id);
     
-    const keyResult = await argon2.hash({
+    const keyResult = await argon2Lib.hash({
       pass: secret,
       salt: salt,
       time: settings.iterations,
       mem: settings.memory,
       hashLen: settings.hashLength,
-      type: argon2.ArgonType.Argon2id
+      type: argon2Lib.ArgonType.Argon2id
     });
     
-    console.log('Key derivation successful, result:', keyResult);
+    console.log('Key derivation successful, result type:', typeof keyResult);
 
     // Convert the derived key hash to Uint8Array
     const derivedKey = new Uint8Array(keyResult.hash);
@@ -139,8 +166,8 @@ export async function encryptText(plaintext: string, secret: string): Promise<st
     console.error('Error stack:', error.stack);
     
     // More specific error messages based on the error type
-    if (error.message?.includes('Argon2id')) {
-      throw new Error('Argon2 library not properly loaded. Please refresh the page and try again.');
+    if (error.message?.includes('load cryptographic library')) {
+      throw new Error(error.message);
     } else if (error.message?.includes('memory')) {
       throw new Error('Insufficient memory for key derivation. Try reducing memory settings or closing other browser tabs.');
     } else if (error.name === 'QuotaExceededError') {
@@ -161,6 +188,9 @@ export async function encryptText(plaintext: string, secret: string): Promise<st
 export async function decryptText(encryptedPayload: string, secret: string): Promise<string> {
   try {
     console.log('Starting decryption process...');
+    
+    // Initialize argon2 library
+    const argon2Lib = await initArgon2();
     
     // Step 1: Decode the input from Base64
     const jsonPayload = atob(encryptedPayload);
@@ -185,13 +215,13 @@ export async function decryptText(encryptedPayload: string, secret: string): Pro
     console.log('Using decryption params:', params);
 
     // Step 4: Re-derive the exact same key using the stored salt and parameters
-    const keyResult = await argon2.hash({
+    const keyResult = await argon2Lib.hash({
       pass: secret,
       salt: salt,
       time: params.iterations,
       mem: params.memory,
       hashLen: params.hashLen || params.hashLength,
-      type: argon2.ArgonType.Argon2id
+      type: argon2Lib.ArgonType.Argon2id
     });
 
     // Convert the derived key hash to Uint8Array
@@ -229,8 +259,8 @@ export async function decryptText(encryptedPayload: string, secret: string): Pro
     console.error('Error stack:', error.stack);
     
     // More specific error messages
-    if (error.message?.includes('Argon2id')) {
-      throw new Error('Argon2 library not properly loaded. Please refresh the page and try again.');
+    if (error.message?.includes('load cryptographic library')) {
+      throw new Error(error.message);
     } else if (error.name === 'OperationError') {
       throw new Error('Decryption failed. Check your secret phrase - it may be incorrect.');
     } else if (error.message?.includes('JSON')) {
