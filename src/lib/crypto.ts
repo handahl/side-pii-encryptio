@@ -1,4 +1,4 @@
-import argon2 from 'argon2-browser';
+import * as argon2 from 'argon2-browser';
 
 /**
  * Converts an ArrayBuffer or Uint8Array to a Base64 string safely, avoiding call-stack overflows.

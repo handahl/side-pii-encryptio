@@ -27,11 +27,4 @@ declare module 'argon2-browser' {
     Argon2i: 1;
     Argon2id: 2;
   };
-  
-  const argon2: {
-    hash: (options: HashOptions) => Promise<HashResult>;
-    ArgonType: typeof ArgonType;
-  };
-  
-  export default argon2;
 }
