@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { encryptText, decryptText } from './crypto';
+  // Import the Web Crypto API version instead
+  import { encryptText, decryptText } from './crypto-webcrypto';
   import { fade } from 'svelte/transition';
 
   let inputText = '';
